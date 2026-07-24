@@ -5,6 +5,18 @@ Notch Master is an experimental macOS utility that turns the display notch into 
 > [!IMPORTANT]
 > This is an unofficial fork of [Boring Notch](https://github.com/TheBoredTeam/boring.notch). It is not affiliated with or endorsed by The Bored Team or OpenAI.
 
+<p align="center">
+  <img
+    src="docs/images/notch-master-expanded.png"
+    alt="Notch Master expanded with media controls, quick folders, local Codex usage, and calendar"
+    width="100%"
+  >
+</p>
+
+<p align="center">
+  <em>Media controls, quick folders, local Codex usage, and calendar in one expanded notch.</em>
+</p>
+
 ## What this fork adds
 
 - **Codex weekly usage** in the expanded notch, with Used/Remaining modes, reset countdown, and color thresholds.
