@@ -139,6 +139,12 @@ struct ContentView: View {
                         vm.notchState == .open ? cornerRadiusInsets.opened.top : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
+                    // Size the shell before drawing its background and mask. Otherwise,
+                    // each tab's intrinsic content height changes the visible notch height.
+                    .frame(
+                        height: vm.notchState == .open ? vm.notchSize.height : nil,
+                        alignment: .top
+                    )
                     .background(
                         shouldHideClosedNotchVisual
                             ? Color.black.opacity(isHovering ? 0.12 : 0.001)
@@ -165,7 +171,6 @@ struct ContentView: View {
                     .animation(.easeInOut(duration: 0.15), value: isHovering)
                 
                 mainLayout
-                    .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
                     .conditionalModifier(true) { view in
                         return view
                             .animation(vm.notchState == .open ? StandardAnimations.open : StandardAnimations.close, value: vm.notchState)
