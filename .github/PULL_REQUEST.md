@@ -1,23 +1,18 @@
-## Pull Request template
-Please, go through these steps before you submit a PR.
+## Summary
 
-1. Make sure that your PR is not a duplicate.
-2. If not, then make sure that:
+Describe what changed and why.
 
-    a. Your changes MUST NOT change translations. Please submit translations on [Crowdin](https://crowdin.com/project/boring-notch).
+## Validation
 
-    b. You have tested the code yourself to ensure it builds correctly and functions as intended.
+- [ ] The `boringNotch` scheme builds successfully.
+- [ ] The changed behavior was tested on the relevant display configuration.
+- [ ] No credentials, user-specific paths, build output, or personal data are included.
+- [ ] Upstream attribution and GPL notices remain intact.
 
-3. **After** these steps, you're ready to open a pull request.
+## Visual changes
 
-    a. Your pull request MUST NOT target the `main` branch on this repository. You probably want to target `dev` instead.
+Add screenshots or a short recording for visible UI changes.
 
-    b. Give a descriptive title to your PR.
+## Related issues
 
-    c. Describe your changes. PR should also include screen recording or screenshots to show the changes that were made.
-
-    d. Put `closes #XXXX` in your description to link your PR to the issue(s) that it fixes (if such).
-
-IMPORTANT: Please review the [CONTRIBUTING.md](../CONTRIBUTING.md) file for detailed contributing guidelines.
-
-**PLEASE REMOVE THIS TEMPLATE BEFORE SUBMITTING**
+Link issues with `Closes #...` where applicable.
