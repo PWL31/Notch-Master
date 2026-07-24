@@ -44,6 +44,7 @@ struct ContentView: View {
 
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
+    private let expandedHeaderTopInset: CGFloat = 5
 
     // MARK: - Corner Radius Scaling
     private var cornerRadiusScaleFactor: CGFloat? {
@@ -356,7 +357,11 @@ struct ContentView: View {
                           BoringFaceAnimation()
                        } else if vm.notchState == .open {
                            BoringHeader()
-                               .frame(height: max(24, displayClosedNotchHeight))
+                               // Open-state controls can be 30pt tall. Reserve their full
+                               // height plus breathing room below the screen/window edge so
+                               // capsules are never clipped by the notch's top boundary.
+                               .frame(height: max(30, displayClosedNotchHeight), alignment: .bottom)
+                               .padding(.top, expandedHeaderTopInset)
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        }
                         // New case to enable compact notch on external displays
