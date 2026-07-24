@@ -204,13 +204,31 @@ enum OSDControlSource: String, CaseIterable, Identifiable, Defaults.Serializable
     }
 }
 
+enum CodexUsageDisplayMode: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case used
+    case remaining
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .used: "Used"
+        case .remaining: "Remaining"
+        }
+    }
+}
+
 extension Defaults.Keys {
     // MARK: General
     static let appLanguage = Key<AppLanguage>("appLanguage", default: .system)
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
     static let showOnAllDisplays = Key<Bool>("showOnAllDisplays", default: false)
+    static let hideClosedNotchOnExternalDisplays = Key<Bool>(
+        "hideClosedNotchOnExternalDisplays",
+        default: false
+    )
     static let automaticallySwitchDisplay = Key<Bool>("automaticallySwitchDisplay", default: true)
-    static let releaseName = Key<String>("releaseName", default: "Flying Rabbit 🐇🪽")
+    static let releaseName = Key<String>("releaseName", default: "Experimental 0.1 🧪")
     
     // MARK: Behavior
     static let minimumHoverDuration = Key<TimeInterval>("minimumHoverDuration", default: 0.3)
@@ -245,6 +263,14 @@ extension Defaults.Keys {
     static let cornerRadiusScaling = Key<Bool>("cornerRadiusScaling", default: true)
 
     static let showNotHumanFace = Key<Bool>("showNotHumanFace", default: false)
+    static let showCodexWeekUsage = Key<Bool>("showCodexWeekUsage", default: true)
+    static let codexUsageDisplayMode = Key<CodexUsageDisplayMode>(
+        "codexUsageDisplayMode",
+        default: .used
+    )
+    static let showQuickFolders = Key<Bool>("showQuickFolders", default: true)
+    static let visibleQuickFolderCount = Key<Int>("visibleQuickFolderCount", default: 3)
+    static let quickFolders = Key<[QuickFolderShortcut]>("quickFolders", default: [])
     static let tileShowLabels = Key<Bool>("tileShowLabels", default: false)
     static let showCalendar = Key<Bool>("showCalendar", default: false)
     static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)

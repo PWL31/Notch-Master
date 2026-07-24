@@ -5,7 +5,7 @@ import AsyncXPCConnection
 final class XPCHelperClient: NSObject {
     nonisolated static let shared = XPCHelperClient()
     
-    private let serviceName = "theboringteam.boringnotch.BoringNotchXPCHelper"
+    private let serviceName = "com.trent.boringnotch.diy.BoringNotchXPCHelper"
     
     private var remoteService: RemoteXPCService<BoringNotchXPCHelperProtocol>?
     private var connection: NSXPCConnection?
@@ -365,5 +365,29 @@ final class XPCHelperClient: NSObject {
             return false
         }
     }
-}
 
+    // MARK: - Codex Usage
+
+    nonisolated func fetchCodexRateLimits() async throws -> Data {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+
+        return try await service.withContinuation { service, continuation in
+            service.fetchCodexRateLimits { data, errorMessage in
+                if let data {
+                    continuation.resume(returning: data as Data)
+                } else {
+                    let description = (errorMessage as String?) ?? "Codex usage is unavailable."
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "BoringNotch.CodexUsage",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: description]
+                        )
+                    )
+                }
+            }
+        }
+    }
+}

@@ -37,6 +37,7 @@ struct ContentView: View {
     @Namespace var albumArtNamespace
 
     @Default(.showNotHumanFace) var showNotHumanFace
+    @Default(.hideClosedNotchOnExternalDisplays) var hideClosedNotchOnExternalDisplays
 
     // Use standardized animations from StandardAnimations enum
     private let animationSpring = StandardAnimations.interactive
@@ -113,6 +114,12 @@ struct ContentView: View {
 
     private var displayClosedNotchHeight: CGFloat { isNotchHeightZero ? 10 : vm.effectiveClosedNotchHeight }
 
+    private var shouldHideClosedNotchVisual: Bool {
+        hideClosedNotchOnExternalDisplays
+            && !vm.hasNotch
+            && vm.notchState == .closed
+    }
+
     var body: some View {
         // Calculate scale based on gesture progress only
         let gestureScale: CGFloat = {
@@ -124,27 +131,37 @@ struct ContentView: View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
                 let mainLayout = NotchLayout()
+                    .opacity(shouldHideClosedNotchVisual ? 0 : 1)
                     .frame(alignment: .top)
                     .padding(
                         .horizontal,
                         vm.notchState == .open ? cornerRadiusInsets.opened.top : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    .background(
+                        shouldHideClosedNotchVisual
+                            ? Color.black.opacity(isHovering ? 0.12 : 0.001)
+                            : Color.black
+                    )
                     .clipShape(currentNotchShape)
                           .overlay(alignment: .top) {
-                              displayClosedNotchHeight.isZero && vm.notchState == .closed ? nil
+                              (shouldHideClosedNotchVisual
+                                || (displayClosedNotchHeight.isZero && vm.notchState == .closed)) ? nil
                         : Rectangle()
                             .fill(.black)
                             .frame(height: 1)
                             .padding(.horizontal, topCornerRadius)
                     }
                     .shadow(
-                        color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
-                            ? .black.opacity(0.7) : .clear, radius: 6
+                        color: shouldHideClosedNotchVisual
+                            ? (isHovering ? .black.opacity(0.55) : .clear)
+                            : (((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
+                                ? .black.opacity(0.7) : .clear),
+                        radius: 6
                     )
                     // Removed conditional bottom padding when using custom 0 notch to keep layout stable
                     .opacity((isNotchHeightZero && vm.notchState == .closed) ? 0.01 : 1)
+                    .animation(.easeInOut(duration: 0.15), value: isHovering)
                 
                 mainLayout
                     .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
@@ -344,7 +361,12 @@ struct ContentView: View {
                        }
                         // New case to enable compact notch on external displays
                         else if !vm.hasNotch {
-                           Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: 11) // idle notch height is halved on non notch display
+                           Rectangle()
+                               .fill(.clear)
+                               .frame(
+                                   width: vm.closedNotchSize.width - 20,
+                                   height: shouldHideClosedNotchVisual ? displayClosedNotchHeight : 11
+                               )
                        } else {
                            Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: displayClosedNotchHeight)
                        }
@@ -580,6 +602,7 @@ struct ContentView: View {
             }
             
             guard vm.notchState == .closed,
+                  !shouldHideClosedNotchVisual,
                   !coordinator.shouldShowSneakPeek(on: vm.screenUUID),
                   Defaults[.openNotchOnHover] else { return }
             

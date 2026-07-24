@@ -9,59 +9,16 @@ import AVFoundation
 import Combine
 import Defaults
 import KeyboardShortcuts
-import Sparkle
 import SwiftUI
 
 @main
 struct DynamicNotchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @Default(.menubarIcon) var showMenuBarIcon
-    @Environment(\.openWindow) var openWindow
-
-    private let sparkleUpdaterDelegate: BoringSparkleUpdaterDelegate
-    let updaterController: SPUStandardUpdaterController
-
-    init() {
-        let sparkleUpdaterDelegate = BoringSparkleUpdaterDelegate()
-        self.sparkleUpdaterDelegate = sparkleUpdaterDelegate
-        updaterController = SPUStandardUpdaterController(
-            startingUpdater: true, updaterDelegate: sparkleUpdaterDelegate, userDriverDelegate: nil)
-        SoftwareUpdateStore.updater = updaterController.updater
-
-        // Initialize the settings window controller with the updater controller
-        SettingsWindowController.shared.setUpdaterController(updaterController)
-    }
 
     var body: some Scene {
-        MenuBarExtra("boring.notch", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
-            Button("Settings") {
-                DispatchQueue.main.async {
-                    SettingsWindowController.shared.showWindow()
-                }
-            }
-            .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
-            CheckForUpdatesView(updater: updaterController.updater)
-            Divider()
-            Button("Restart Boring Notch") {
-                ApplicationRelauncher.restart()
-            }
-            Button("Quit", role: .destructive) {
-                NSApplication.shared.terminate(self)
-            }
-            .keyboardShortcut(KeyEquivalent("Q"), modifiers: .command)
+        Settings {
+            EmptyView()
         }
-    }
-}
-
-@MainActor
-enum SoftwareUpdateStore {
-    static var updater: SPUUpdater?
-}
-
-@MainActor
-final class BoringSparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
-    func updaterShouldPromptForPermissionToCheck(forUpdates updater: SPUUpdater) -> Bool {
-        false
     }
 }
 
@@ -628,7 +585,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.contentView = NSHostingView(
                 rootView: OnboardingView(
                     step: step,
-                    updater: SoftwareUpdateStore.updater,
                     onFinish: {
                         window.orderOut(nil)
 //                        NSApp.setActivationPolicy(.accessory)

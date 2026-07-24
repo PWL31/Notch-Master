@@ -6,13 +6,11 @@
 //
 
 import Defaults
-import Sparkle
 import SwiftUI
 
 struct About: View {
     @State private var showBuildNumber: Bool = false
-    let updaterController: SPUStandardUpdaterController
-    @Environment(\.openWindow) var openWindow
+
     var body: some View {
         VStack {
             Form {
@@ -30,7 +28,7 @@ struct About: View {
                             Text("(\(Bundle.main.buildVersionNumber ?? ""))")
                                 .foregroundStyle(.secondary)
                         }
-                        Text(Bundle.main.releaseVersionNumber ?? "unkown")
+                        Text(Bundle.main.releaseVersionNumber ?? "unknown")
                             .foregroundStyle(.secondary)
                     }
                     .onTapGesture {
@@ -42,12 +40,19 @@ struct About: View {
                     Text("Version info")
                 }
 
-                UpdaterSettingsView(updater: updaterController.updater)
+                Section {
+                    LabeledContent("Update channel", value: "GitHub Releases")
+                    Text("Automatic updates are disabled for this fork. Download new versions from the project’s Releases page.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Updates")
+                }
 
                 HStack(spacing: 30) {
                     Spacer(minLength: 0)
                     Button {
-                        if let url = URL(string: "https://github.com/TheBoredTeam/boring.notch") {
+                        if let url = URL(string: "https://github.com/PWL31/Notch-Master") {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
@@ -60,13 +65,25 @@ struct About: View {
                         }
                         .contentShape(Rectangle())
                     }
+                    Button {
+                        if let url = URL(string: "https://github.com/TheBoredTeam/boring.notch") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        VStack(spacing: 5) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .frame(width: 18, height: 18)
+                            Text("Upstream")
+                        }
+                        .contentShape(Rectangle())
+                    }
                     Spacer(minLength: 0)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
             VStack(spacing: 0) {
                 Divider()
-                Text("Made with 🫶🏻 by not so boring not.people")
+                Text("Notch Master by PWL31 · Based on Boring Notch by The Bored Team")
                     .foregroundStyle(.secondary)
                     .padding(.top, 5)
                     .padding(.bottom, 7)
@@ -74,9 +91,6 @@ struct About: View {
                     .padding(.horizontal, 10)
             }
             .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .toolbar {
-            CheckForUpdatesView(updater: updaterController.updater)
         }
         .navigationTitle("About")
     }

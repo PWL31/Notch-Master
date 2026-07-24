@@ -19,6 +19,7 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
     private var lunarPipeHandler: JSONLinesPipeHandler?
     private var lunarStreamTask: Task<Void, Never>?
     private var lunarListener: BoringNotchXPCHelperLunarListener?
+    private let codexQueue = DispatchQueue(label: "BoringNotchXPCHelper.codex")
 
     init(connection: NSXPCConnection) {
         self.connection = connection
@@ -224,6 +225,117 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
             IOObjectRelease(io)
         }
         reply(false)
+    }
+
+    // MARK: - Codex Usage
+
+    @objc func fetchCodexRateLimits(with reply: @escaping (NSData?, NSString?) -> Void) {
+        codexQueue.async {
+            guard let executableURL = self.codexExecutableURL() else {
+                reply(nil, "Codex is not installed." as NSString)
+                return
+            }
+
+            let process = Process()
+            let inputPipe = Pipe()
+            let outputPipe = Pipe()
+            process.executableURL = executableURL
+            process.arguments = ["app-server"]
+            process.standardInput = inputPipe
+            process.standardOutput = outputPipe
+            process.standardError = FileHandle.nullDevice
+
+            let stateQueue = DispatchQueue(label: "BoringNotchXPCHelper.codex.request")
+            var buffer = Data()
+            var finished = false
+
+            func finish(_ data: Data?, _ error: String?) {
+                stateQueue.async {
+                    guard !finished else { return }
+                    finished = true
+                    outputPipe.fileHandleForReading.readabilityHandler = nil
+                    try? inputPipe.fileHandleForWriting.close()
+                    if process.isRunning {
+                        process.terminate()
+                    }
+                    reply(data as NSData?, error as NSString?)
+                }
+            }
+
+            func send(_ object: [String: Any]) throws {
+                let data = try JSONSerialization.data(withJSONObject: object)
+                inputPipe.fileHandleForWriting.write(data)
+                inputPipe.fileHandleForWriting.write(Data([0x0A]))
+            }
+
+            outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                let chunk = handle.availableData
+                guard !chunk.isEmpty else {
+                    finish(nil, "Codex closed the local connection.")
+                    return
+                }
+
+                stateQueue.async {
+                    guard !finished else { return }
+                    buffer.append(chunk)
+
+                    while let newlineIndex = buffer.firstIndex(of: 0x0A) {
+                        let line = Data(buffer[..<newlineIndex])
+                        buffer.removeSubrange(...newlineIndex)
+                        guard
+                            !line.isEmpty,
+                            let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                            let id = object["id"] as? NSNumber
+                        else { continue }
+
+                        if id.intValue == 0 {
+                            do {
+                                try send(["method": "initialized", "params": [:]])
+                                try send(["method": "account/rateLimits/read", "id": 1])
+                            } catch {
+                                finish(nil, error.localizedDescription)
+                            }
+                        } else if id.intValue == 1 {
+                            finish(line, nil)
+                        }
+                    }
+                }
+            }
+
+            do {
+                try process.run()
+                try send([
+                    "method": "initialize",
+                    "id": 0,
+                    "params": [
+                        "clientInfo": [
+                            "name": "notch_master",
+                            "title": "Notch Master",
+                            "version": "0.1.0"
+                        ]
+                    ]
+                ])
+            } catch {
+                finish(nil, error.localizedDescription)
+                return
+            }
+
+            stateQueue.asyncAfter(deadline: .now() + 10) {
+                guard !finished else { return }
+                finish(nil, "Timed out while reading Codex usage.")
+            }
+        }
+    }
+
+    private func codexExecutableURL() -> URL? {
+        let paths = [
+            "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "/Applications/Codex.app/Contents/Resources/codex",
+            "/opt/homebrew/bin/codex",
+            "/usr/local/bin/codex"
+        ]
+        return paths.first(where: FileManager.default.isExecutableFile(atPath:))
+            .map(URL.init(fileURLWithPath:))
     }
 
     // MARK: - Lunar Events

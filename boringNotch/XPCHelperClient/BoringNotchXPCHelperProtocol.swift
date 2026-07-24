@@ -59,4 +59,6 @@ final class BNLunarBrightnessEvent: NSObject, NSSecureCoding {
     func stopLunarEventStream()
     /// Write Lunar's hideOSD preference (disable/enable Lunar's OSD when we replace it).
     func setLunarOSDHidden(_ hide: Bool, with reply: @escaping (Bool) -> Void)
+    /// Read the signed-in Codex account's rate-limit snapshot as one JSON response.
+    func fetchCodexRateLimits(with reply: @escaping (NSData?, NSString?) -> Void)
 }

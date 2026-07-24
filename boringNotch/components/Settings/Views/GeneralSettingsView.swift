@@ -27,6 +27,7 @@ struct GeneralSettings: View {
     @Default(.notchHeight) var notchHeight
     @Default(.notchHeightMode) var notchHeightMode
     @Default(.showOnAllDisplays) var showOnAllDisplays
+    @Default(.hideClosedNotchOnExternalDisplays) var hideClosedNotchOnExternalDisplays
     @Default(.automaticallySwitchDisplay) var automaticallySwitchDisplay
     @Default(.enableGestures) var enableGestures
     @Default(.openNotchOnHover) var openNotchOnHover
@@ -36,13 +37,6 @@ struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: Binding(
-                    get: { Defaults[.menubarIcon] },
-                    set: { Defaults[.menubarIcon] = $0 }
-                )) {
-                    Text("Show menu bar icon")
-                }
-                .tint(.effectiveAccent)
                 LaunchAtLogin.Toggle() {
                     Text("Launch at login")
                 }
@@ -61,6 +55,14 @@ struct GeneralSettings: View {
                 .onChange(of: showOnAllDisplays) {
                     NotificationCenter.default.post(
                         name: Notification.Name.showOnAllDisplaysChanged, object: nil)
+                }
+                Defaults.Toggle(key: .hideClosedNotchOnExternalDisplays) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Hide closed notch on external displays")
+                        Text("Keeps an invisible gesture area at the center of the menu bar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Picker("Preferred display", selection: $coordinator.preferredScreenUUID) {
                     ForEach(screens, id: \.uuid) { screen in
@@ -185,7 +187,7 @@ struct GeneralSettings: View {
                 ApplicationRelauncher.restart()
             }
         } message: {
-            Text("Changing the app language requires restarting Boring Notch.")
+            Text("Changing the app language requires restarting Notch Master.")
         }
     }
 

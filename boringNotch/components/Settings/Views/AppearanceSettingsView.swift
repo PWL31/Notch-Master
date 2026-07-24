@@ -10,7 +10,9 @@ import SwiftUI
 
 struct Appearance: View {
     @ObservedObject var coordinator = BoringViewCoordinator.shared
+    @ObservedObject private var codexUsage = CodexUsageViewModel.shared
     @Default(.sliderColor) var sliderColor
+    @Default(.codexUsageDisplayMode) private var codexUsageDisplayMode
 
     let icons: [String] = ["logo2"]
     @State private var selectedIcon: String = "logo2"
@@ -68,6 +70,22 @@ struct Appearance: View {
                 Text("Media")
             }
             Section {
+                Defaults.Toggle(key: .showCodexWeekUsage) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show Codex weekly usage")
+                        Text(codexUsage.settingsDescription)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if Defaults[.showCodexWeekUsage] {
+                    Picker("Codex usage value", selection: $codexUsageDisplayMode) {
+                        ForEach(CodexUsageDisplayMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
                 Defaults.Toggle(key: .showNotHumanFace) {
                     Text("Show cool face animation while inactive")
                 }

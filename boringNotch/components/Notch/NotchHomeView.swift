@@ -125,6 +125,9 @@ struct MusicControlsView: View {
     @State private var lastDragged: Date = .distantPast
     @Default(.musicControlSlots) private var slotConfig
     @Default(.musicControlSlotLimit) private var slotLimit
+    @Default(.showQuickFolders) private var showQuickFolders
+    @Default(.quickFolders) private var quickFolders
+    @Default(.visibleQuickFolderCount) private var visibleQuickFolderCount
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -224,7 +227,11 @@ struct MusicControlsView: View {
 
     private var slotToolbar: some View {
         let slots = activeSlots
-        return HStack(spacing: 6) {
+        let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
+        let hasVisibleQuickFolders =
+            showQuickFolders && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
+
+        return HStack(spacing: hasVisibleQuickFolders ? 3 : 6) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 slotView(for: slot)
                     .frame(alignment: .center)
@@ -427,6 +434,9 @@ struct NotchHomeView: View {
     let albumArtNamespace: Namespace.ID
     let horizontalMediaGestureFeedback: CGFloat
     @Binding var isHoveringMusicArea: Bool
+    @Default(.showQuickFolders) private var showQuickFolders
+    @Default(.quickFolders) private var quickFolders
+    @Default(.visibleQuickFolderCount) private var visibleQuickFolderCount
 
     var body: some View {
         mainContent
@@ -437,17 +447,44 @@ struct NotchHomeView: View {
         Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
     }
 
+    private var shouldShowQuickFolders: Bool {
+        let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
+        return showQuickFolders
+            && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
+    }
+
+    private var contentSpacing: CGFloat {
+        if shouldShowQuickFolders {
+            return 7
+        }
+        return (shouldShowCamera && Defaults[.showCalendar]) ? 10 : 15
+    }
+
     private var mainContent: some View {
-        HStack(alignment: .top, spacing: (shouldShowCamera && Defaults[.showCalendar]) ? 10 : 15) {
+        HStack(alignment: .top, spacing: contentSpacing) {
             MusicPlayerView(
                 albumArtNamespace: albumArtNamespace,
                 horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
                 isHoveringMusicArea: $isHoveringMusicArea
             )
+            .frame(
+                minWidth: shouldShowQuickFolders ? 270 : 0,
+                maxWidth: .infinity,
+                alignment: .leading
+            )
+            .layoutPriority(1)
+
+            if shouldShowQuickFolders {
+                QuickFolderLauncherView()
+                    .frame(width: 30)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
 
             if Defaults[.showCalendar] {
                 CalendarView()
                     .frame(width: shouldShowCamera ? 170 : 215)
+                    .fixedSize(horizontal: true, vertical: false)
                     .onHover { isHovering in
                         vm.isHoveringCalendar = isHovering
                     }
