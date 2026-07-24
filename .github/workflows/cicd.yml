@@ -1,6 +1,7 @@
 name: Build for macOS
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - '*'
