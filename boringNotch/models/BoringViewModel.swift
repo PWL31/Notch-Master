@@ -39,6 +39,10 @@ class BoringViewModel: NSObject, ObservableObject {
     let webcamManager = WebcamManager.shared
     @Published var isCameraExpanded: Bool = false
     @Published var isRequestingAuthorization: Bool = false
+
+    var isMirrorPreviewVisible: Bool {
+        Defaults[.showMirror] && webcamManager.cameraAvailable && isCameraExpanded
+    }
     
     deinit {
         destroy()

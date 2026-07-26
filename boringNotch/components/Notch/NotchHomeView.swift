@@ -118,7 +118,6 @@ struct AlbumArtView: View {
 struct MusicControlsView: View {
     @ObservedObject var musicManager = MusicManager.shared
     @EnvironmentObject var vm: BoringViewModel
-    @ObservedObject var webcamManager = WebcamManager.shared
     let horizontalMediaGestureFeedback: CGFloat
     @State private var sliderValue: Double = 0
     @State private var dragging: Bool = false
@@ -229,7 +228,9 @@ struct MusicControlsView: View {
         let slots = activeSlots
         let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
         let hasVisibleQuickFolders =
-            showQuickFolders && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
+            !vm.isMirrorPreviewVisible
+            && showQuickFolders
+            && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
 
         return HStack(spacing: hasVisibleQuickFolders ? 3 : 6) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
@@ -248,7 +249,7 @@ struct MusicControlsView: View {
         let padded = slotConfig.padded(to: sanitizedLimit, filler: .none)
         let result = Array(padded.prefix(sanitizedLimit))
         // If calendar and camera are both visible alongside music, hide the edge slots
-        let shouldHideEdges = Defaults[.showCalendar] && Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
+        let shouldHideEdges = Defaults[.showCalendar] && vm.isMirrorPreviewVisible
         if shouldHideEdges && result.count >= 5 {
             return Array(result.dropFirst().dropLast())
         }
@@ -444,10 +445,11 @@ struct NotchHomeView: View {
     }
 
     private var shouldShowCamera: Bool {
-        Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
+        vm.isMirrorPreviewVisible
     }
 
     private var shouldShowQuickFolders: Bool {
+        guard !shouldShowCamera else { return false }
         let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
         return showQuickFolders
             && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
