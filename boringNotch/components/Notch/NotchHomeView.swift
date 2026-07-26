@@ -469,12 +469,15 @@ struct NotchHomeView: View {
                 horizontalMediaGestureFeedback: horizontalMediaGestureFeedback,
                 isHoveringMusicArea: $isHoveringMusicArea
             )
-            .frame(
-                minWidth: shouldShowQuickFolders ? 270 : 0,
-                maxWidth: .infinity,
-                alignment: .leading
-            )
-            .layoutPriority(1)
+            .conditionalModifier(shouldShowQuickFolders) { player in
+                player
+                    .frame(
+                        minWidth: 270,
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
+                    .layoutPriority(1)
+            }
 
             if shouldShowQuickFolders {
                 QuickFolderLauncherView()
@@ -486,7 +489,9 @@ struct NotchHomeView: View {
             if Defaults[.showCalendar] {
                 CalendarView()
                     .frame(width: shouldShowCamera ? 170 : 215)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .conditionalModifier(shouldShowQuickFolders) { calendar in
+                        calendar.fixedSize(horizontal: true, vertical: false)
+                    }
                     .onHover { isHovering in
                         vm.isHoveringCalendar = isHovering
                     }
