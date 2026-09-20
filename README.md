@@ -31,18 +31,18 @@ Notch Master also retains the upstream media controls, calendar, shelf, mirror, 
 
 ## Requirements
 
-- macOS 14 Sonoma or later.
+- macOS 15 Sequoia or later is recommended for the prebuilt release. The Xcode target is macOS 14, but the bundled MediaRemoteAdapter framework was built for macOS 15; macOS 14 compatibility has not been verified.
 - A Mac with or without a physical notch.
 - The Codex usage badge requires a working local Codex installation signed in to your account. No API key is stored by Notch Master.
 - Temperature and fan monitoring works directly through AppleSMC. Fan-control buttons require Notch Master's optional local controller, installed from **Settings → Activity** with one administrator approval; without it, the page remains safely read-only.
 
 ## Install
 
-1. Download `Notch-Master-v0.1.0-macOS.zip` from the [latest GitHub Release](https://github.com/PWL31/Notch-Master/releases/latest).
+1. Download `Notch-Master-v0.2.0-macOS.zip` from the [latest GitHub Release](https://github.com/PWL31/Notch-Master/releases/latest).
 2. Unzip it and move **Notch Master.app** to `/Applications`.
 3. Open the app.
 
-The latest tagged download may lag behind `main`. Build from source for the newest changes until a new release is published.
+The tagged download is a snapshot; `main` may contain newer, unreleased changes. Build from source if you need those changes.
 
 This experimental build is ad-hoc signed rather than Apple-notarized. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**. Alternatively, after confirming that the download came from this repository, run:
 
@@ -81,7 +81,7 @@ Swift Package Manager dependencies are resolved by Xcode. The main target and XP
 
 ## Project status
 
-`v0.1.0` is an **experimental personal-fork release**; `main` is active development. It is usable, but it is not notarized and may change quickly. Please report reproducible bugs through [GitHub Issues](https://github.com/PWL31/Notch-Master/issues).
+`v0.2.0` is an **experimental personal-fork release**; `main` is active development. It is usable, but it is not notarized and may change quickly. Please report reproducible bugs through [GitHub Issues](https://github.com/PWL31/Notch-Master/issues).
 
 ## License and attribution
 
