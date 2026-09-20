@@ -390,4 +390,179 @@ final class XPCHelperClient: NSObject {
             }
         }
     }
+
+    // MARK: - OneDrive
+
+    nonisolated func fetchOneDriveStatus() async throws -> Data {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+
+        return try await service.withContinuation { service, continuation in
+            service.fetchOneDriveStatus { data, errorMessage in
+                if let data {
+                    continuation.resume(returning: data as Data)
+                } else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.OneDrive",
+                            code: 1,
+                            userInfo: [
+                                NSLocalizedDescriptionKey:
+                                    (errorMessage as String?)
+                                    ?? "OneDrive status is unavailable."
+                            ]
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    nonisolated func performOneDriveAction(_ action: String) async throws {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+
+        try await service.withContinuation { service, continuation in
+            service.performOneDriveAction(action as NSString) { success, errorMessage in
+                if success {
+                    continuation.resume(returning: ())
+                } else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.OneDrive",
+                            code: 2,
+                            userInfo: [
+                                NSLocalizedDescriptionKey:
+                                    (errorMessage as String?)
+                                    ?? "The OneDrive action failed."
+                            ]
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Thermal Monitoring and Guarded Fan Control
+
+    nonisolated func fetchThermalSnapshot() async throws -> Data {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+
+        return try await service.withContinuation { service, continuation in
+            service.fetchThermalSnapshot { data, errorMessage in
+                if let data {
+                    continuation.resume(returning: data as Data)
+                } else {
+                    let description = (errorMessage as String?)
+                        ?? "Thermal data is unavailable."
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.Thermal",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: description]
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    nonisolated func setFanControl(
+        mode: String,
+        rpm: Int?
+    ) async throws {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+
+        try await service.withContinuation { service, continuation in
+            service.setFanControlMode(
+                mode as NSString,
+                rpm: rpm.map(NSNumber.init(value:))
+            ) { success, errorMessage in
+                if success {
+                    continuation.resume(returning: ())
+                } else {
+                    let description = (errorMessage as String?)
+                        ?? "The fan command was rejected."
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.FanControl",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: description]
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    nonisolated func fanControllerStatus() async -> (Bool, String) {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.fanControllerStatus { installed, detail in
+                    continuation.resume(
+                        returning: (installed, detail as String)
+                    )
+                }
+            }
+        } catch {
+            return (false, error.localizedDescription)
+        }
+    }
+
+    nonisolated func installFanController() async throws -> String {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+        return try await service.withContinuation { service, continuation in
+            service.installFanController { success, message in
+                if success {
+                    continuation.resume(returning: (message as String?) ?? "Installed")
+                } else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.FanControlInstaller",
+                            code: 1,
+                            userInfo: [
+                                NSLocalizedDescriptionKey:
+                                    (message as String?) ?? "Installation failed."
+                            ]
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    nonisolated func uninstallFanController() async throws -> String {
+        let service = await MainActor.run {
+            ensureRemoteService()
+        }
+        return try await service.withContinuation { service, continuation in
+            service.uninstallFanController { success, message in
+                if success {
+                    continuation.resume(returning: (message as String?) ?? "Removed")
+                } else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "NotchMaster.FanControlInstaller",
+                            code: 2,
+                            userInfo: [
+                                NSLocalizedDescriptionKey:
+                                    (message as String?) ?? "Removal failed."
+                            ]
+                        )
+                    )
+                }
+            }
+        }
+    }
 }

@@ -21,6 +21,7 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case shelf
+    case activity
 }
 
 enum DownloadIndicatorStyle: String, Defaults.Serializable {
@@ -37,6 +38,36 @@ enum DownloadIconStyle: String, Defaults.Serializable {
 enum MirrorShapeEnum: String, Defaults.Serializable {
     case rectangle = "Rectangular"
     case circle = "Circular"
+}
+
+enum ActivityMetric: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case cpuLoad
+    case memoryPressure
+    case networkIO
+    case loadAverage
+    case thermalPressure
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .cpuLoad: "CPU Load"
+        case .memoryPressure: "Memory Pressure"
+        case .networkIO: "Network I/O"
+        case .loadAverage: "Load Average"
+        case .thermalPressure: "Thermal Pressure"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .cpuLoad: "cpu"
+        case .memoryPressure: "memorychip"
+        case .networkIO: "arrow.up.arrow.down"
+        case .loadAverage: "waveform.path.ecg"
+        case .thermalPressure: "thermometer.medium"
+        }
+    }
 }
 
 enum WindowHeightMode: String, Defaults.Serializable {

@@ -13,6 +13,8 @@ struct Shelf: View {
     @Default(.shelfTapToOpen) var shelfTapToOpen: Bool
     @Default(.quickShareProvider) var quickShareProvider
     @Default(.expandedDragDetection) var expandedDragDetection: Bool
+    @Default(.oneDriveWebURL) private var oneDriveWebURL
+    @Default(.oneDriveRecycleBinURL) private var oneDriveRecycleBinURL
     @StateObject private var quickShareService = QuickShareService.shared
 
     private var selectedProvider: QuickShareProvider? {
@@ -45,6 +47,10 @@ struct Shelf: View {
                 }
                 Defaults.Toggle(key: .reverseShelfOrdering) {
                     Text("Keep newer shelf items in front")
+                }
+
+                Defaults.Toggle(key: .showOneDriveInShelf) {
+                    Text("Show OneDrive status in shelf")
                 }
 
             } header: {
@@ -106,6 +112,21 @@ struct Shelf: View {
                 }
             } footer: {
                 Text("Choose which service to use when sharing files from the shelf. Click the shelf button to select files, or drag files onto it to share immediately.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Section {
+                LabeledContent("Status") {
+                    Text("Local only")
+                        .foregroundStyle(.secondary)
+                }
+                TextField("OneDrive web URL", text: $oneDriveWebURL)
+                TextField("Recycle bin URL", text: $oneDriveRecycleBinURL)
+            } header: {
+                Text("OneDrive")
+            } footer: {
+                Text("Paste your own HTTPS OneDrive links here. They are saved only on this Mac; an empty or invalid URL disables its shortcut. Detailed local status requires Accessibility access; no Microsoft account token or cloud API is used.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

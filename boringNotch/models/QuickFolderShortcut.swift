@@ -7,6 +7,8 @@ import Defaults
 import Foundation
 
 struct QuickFolderShortcut: Codable, Equatable, Identifiable, Defaults.Serializable {
+    static let maximumSlotCount = 5
+
     let id: UUID
     let slot: Int
     let name: String

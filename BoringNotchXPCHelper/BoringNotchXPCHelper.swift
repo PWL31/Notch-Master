@@ -20,6 +20,9 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
     private var lunarStreamTask: Task<Void, Never>?
     private var lunarListener: BoringNotchXPCHelperLunarListener?
     private let codexQueue = DispatchQueue(label: "BoringNotchXPCHelper.codex")
+    private let oneDriveQueue = DispatchQueue(label: "BoringNotchXPCHelper.onedrive")
+    private let thermalService = ThermalSMCService()
+    private let fanInstallerService = FanControlInstallerService()
 
     init(connection: NSXPCConnection) {
         self.connection = connection
@@ -77,6 +80,318 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             reply(AXIsProcessTrusted())
         }
+    }
+
+    // MARK: - OneDrive
+
+    @objc func fetchOneDriveStatus(with reply: @escaping (NSData?, NSString?) -> Void) {
+        oneDriveQueue.async {
+            let installed = self.oneDriveApplicationURL() != nil
+            let runningApplication = self.runningOneDriveApplication()
+            let isRunning = runningApplication != nil
+            let isAuthorized = AXIsProcessTrusted()
+
+            var accountName: String?
+            var statusText: String?
+
+            if isAuthorized,
+               let runningApplication,
+               let statusItem = self.oneDriveStatusItem(for: runningApplication) {
+                let title = self.axString(statusItem, attribute: kAXTitleAttribute)
+                let lines = (title ?? "")
+                    .components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+
+                if let first = lines.first {
+                    accountName = self.oneDriveAccountName(from: first)
+                }
+                if lines.count > 1 {
+                    statusText = lines.dropFirst().joined(separator: " ")
+                }
+            }
+
+            let payload: [String: Any] = [
+                "installed": installed,
+                "running": isRunning,
+                "accessibilityAuthorized": isAuthorized,
+                "accountName": accountName ?? NSNull(),
+                "statusText": statusText ?? NSNull()
+            ]
+
+            do {
+                let data = try JSONSerialization.data(withJSONObject: payload)
+                reply(data as NSData, nil)
+            } catch {
+                reply(nil, error.localizedDescription as NSString)
+            }
+        }
+    }
+
+    @objc func performOneDriveAction(
+        _ action: NSString,
+        with reply: @escaping (Bool, NSString?) -> Void
+    ) {
+        oneDriveQueue.async {
+            guard let runningApplication = self.runningOneDriveApplication() else {
+                if let applicationURL = self.oneDriveApplicationURL() {
+                    let configuration = NSWorkspace.OpenConfiguration()
+                    NSWorkspace.shared.openApplication(
+                        at: applicationURL,
+                        configuration: configuration
+                    ) { _, error in
+                        if let error {
+                            reply(false, error.localizedDescription as NSString)
+                        } else {
+                            reply(
+                                false,
+                                "OneDrive was started. Try the action again when it finishes launching."
+                                    as NSString
+                            )
+                        }
+                    }
+                } else {
+                    reply(false, "OneDrive is not installed." as NSString)
+                }
+                return
+            }
+
+            guard AXIsProcessTrusted() else {
+                let options = [
+                    kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+                ] as CFDictionary
+                AXIsProcessTrustedWithOptions(options)
+                reply(
+                    false,
+                    "Accessibility access is required. Grant it, then try again." as NSString
+                )
+                return
+            }
+
+            guard let statusItem = self.oneDriveStatusItem(for: runningApplication) else {
+                reply(false, "The OneDrive status control could not be found." as NSString)
+                return
+            }
+
+            let requestedAction = (action as String).lowercased()
+            guard ["activity", "folder", "preferences"].contains(requestedAction) else {
+                reply(false, "Unsupported OneDrive action." as NSString)
+                return
+            }
+
+            guard let window = self.ensureOneDrivePopoverOpen(
+                for: runningApplication,
+                statusItem: statusItem
+            ) else {
+                reply(false, "The OneDrive activity center did not open." as NSString)
+                return
+            }
+
+            if requestedAction == "activity" {
+                reply(true, nil)
+                return
+            }
+
+            let buttons = self.axDescendants(of: window).filter {
+                self.axString($0, attribute: kAXRoleAttribute) == (kAXButtonRole as String)
+            }
+
+            if requestedAction == "folder" {
+                let openFolderButton = buttons.first {
+                    self.axString($0, attribute: kAXHelpAttribute)?
+                        .localizedCaseInsensitiveContains("Open Folder") == true
+                } ?? buttons.dropFirst().first
+
+                guard let openFolderButton,
+                      AXUIElementPerformAction(
+                        openFolderButton,
+                        kAXPressAction as CFString
+                      ) == .success
+                else {
+                    reply(false, "The OneDrive folder button could not be used." as NSString)
+                    return
+                }
+
+                reply(true, nil)
+                return
+            }
+
+            let moreButton = buttons.first {
+                self.axString($0, attribute: kAXHelpAttribute)?
+                    .localizedCaseInsensitiveContains("More") == true
+            } ?? buttons.last
+
+            guard let moreButton,
+                  AXUIElementPerformAction(
+                    moreButton,
+                    kAXPressAction as CFString
+                  ) == .success
+            else {
+                reply(false, "The OneDrive settings menu could not be opened." as NSString)
+                return
+            }
+
+            Thread.sleep(forTimeInterval: 0.25)
+            self.postKeyPress(keyCode: 36) // Return selects Preferences, the first menu item.
+            reply(true, nil)
+        }
+    }
+
+    private let oneDriveBundleIdentifiers = [
+        "com.microsoft.OneDrive-mac",
+        "com.microsoft.OneDrive"
+    ]
+
+    private func oneDriveApplicationURL() -> URL? {
+        oneDriveBundleIdentifiers.lazy.compactMap {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }.first
+    }
+
+    private func runningOneDriveApplication() -> NSRunningApplication? {
+        oneDriveBundleIdentifiers.lazy.compactMap {
+            NSRunningApplication.runningApplications(withBundleIdentifier: $0).first
+        }.first
+    }
+
+    private func oneDriveStatusItem(
+        for application: NSRunningApplication
+    ) -> AXUIElement? {
+        let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
+        let menuBarAttributes = [kAXExtrasMenuBarAttribute, kAXMenuBarAttribute]
+
+        for attribute in menuBarAttributes {
+            guard let menuBar: AXUIElement = axValue(
+                applicationElement,
+                attribute: attribute
+            ) else { continue }
+
+            let children: [AXUIElement] = axValue(
+                menuBar,
+                attribute: kAXChildrenAttribute
+            ) ?? []
+
+            if let item = children.first(where: { element in
+                let title = axString(element, attribute: kAXTitleAttribute) ?? ""
+                let description = axString(element, attribute: kAXDescriptionAttribute) ?? ""
+                return title.localizedCaseInsensitiveContains("OneDrive")
+                    || description.localizedCaseInsensitiveContains("status menu")
+            }) {
+                return item
+            }
+        }
+
+        return nil
+    }
+
+    private func oneDriveWindows(
+        for application: NSRunningApplication
+    ) -> [AXUIElement] {
+        let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
+        return axValue(applicationElement, attribute: kAXWindowsAttribute) ?? []
+    }
+
+    private func ensureOneDrivePopoverOpen(
+        for application: NSRunningApplication,
+        statusItem: AXUIElement
+    ) -> AXUIElement? {
+        if let activityWindow = oneDriveActivityWindow(for: application) {
+            return activityWindow
+        }
+
+        guard AXUIElementPerformAction(
+            statusItem,
+            kAXPressAction as CFString
+        ) == .success else {
+            return nil
+        }
+        Thread.sleep(forTimeInterval: 0.45)
+        return oneDriveActivityWindow(for: application)
+    }
+
+    private func oneDriveActivityWindow(
+        for application: NSRunningApplication
+    ) -> AXUIElement? {
+        oneDriveWindows(for: application).first { window in
+            axDescendants(of: window).contains { element in
+                guard axString(element, attribute: kAXRoleAttribute)
+                    == (kAXButtonRole as String),
+                      let help = axString(element, attribute: kAXHelpAttribute)
+                else { return false }
+
+                return help.localizedCaseInsensitiveContains("Open Folder")
+                    || help.localizedCaseInsensitiveContains("More")
+            }
+        }
+    }
+
+    private func oneDriveAccountName(from title: String) -> String {
+        let separators = ["OneDrive — ", "OneDrive – ", "OneDrive - "]
+        for separator in separators where title.hasPrefix(separator) {
+            return String(title.dropFirst(separator.count))
+        }
+        return title == "OneDrive" ? "OneDrive" : title
+    }
+
+    private func axDescendants(
+        of root: AXUIElement,
+        maxDepth: Int = 8,
+        maxElements: Int = 200
+    ) -> [AXUIElement] {
+        var result: [AXUIElement] = []
+
+        func visit(_ element: AXUIElement, depth: Int) {
+            guard depth < maxDepth, result.count < maxElements else { return }
+            let children: [AXUIElement] = axValue(
+                element,
+                attribute: kAXChildrenAttribute
+            ) ?? []
+            for child in children where result.count < maxElements {
+                result.append(child)
+                visit(child, depth: depth + 1)
+            }
+        }
+
+        visit(root, depth: 0)
+        return result
+    }
+
+    private func axString(
+        _ element: AXUIElement,
+        attribute: String
+    ) -> String? {
+        axValue(element, attribute: attribute)
+    }
+
+    private func axValue<T>(
+        _ element: AXUIElement,
+        attribute: String
+    ) -> T? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success,
+              let value
+        else { return nil }
+        return value as? T
+    }
+
+    private func postKeyPress(keyCode: CGKeyCode) {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let keyDown = CGEvent(
+            keyboardEventSource: source,
+            virtualKey: keyCode,
+            keyDown: true
+        )
+        let keyUp = CGEvent(
+            keyboardEventSource: source,
+            virtualKey: keyCode,
+            keyDown: false
+        )
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
     }
     
     private class KeyboardBrightnessClient {
@@ -336,6 +651,52 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
         ]
         return paths.first(where: FileManager.default.isExecutableFile(atPath:))
             .map(URL.init(fileURLWithPath:))
+    }
+
+    // MARK: - Thermal Monitoring and Guarded Fan Control
+
+    @objc func fetchThermalSnapshot(
+        with reply: @escaping (NSData?, NSString?) -> Void
+    ) {
+        thermalService.fetchSnapshot { data, error in
+            reply(data as NSData?, error as NSString?)
+        }
+    }
+
+    @objc func setFanControlMode(
+        _ mode: NSString,
+        rpm: NSNumber?,
+        with reply: @escaping (Bool, NSString?) -> Void
+    ) {
+        thermalService.setFanControl(
+            mode: mode as String,
+            rpm: rpm?.intValue
+        ) { success, message in
+            reply(success, message as NSString?)
+        }
+    }
+
+    @objc func fanControllerStatus(
+        with reply: @escaping (Bool, NSString) -> Void
+    ) {
+        let status = fanInstallerService.status()
+        reply(status.installed, status.detail as NSString)
+    }
+
+    @objc func installFanController(
+        with reply: @escaping (Bool, NSString?) -> Void
+    ) {
+        fanInstallerService.install { success, message in
+            reply(success, message as NSString?)
+        }
+    }
+
+    @objc func uninstallFanController(
+        with reply: @escaping (Bool, NSString?) -> Void
+    ) {
+        fanInstallerService.uninstall { success, message in
+            reply(success, message as NSString?)
+        }
     }
 
     // MARK: - Lunar Events

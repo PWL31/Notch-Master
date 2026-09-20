@@ -36,7 +36,7 @@ struct QuickFolderSettings: View {
                     Text("Show quick folders in Notch")
                 }
                 Picker("Visible shortcuts", selection: $visibleQuickFolderCount) {
-                    ForEach(1...4, id: \.self) { count in
+                    ForEach(1...QuickFolderShortcut.maximumSlotCount, id: \.self) { count in
                         Text("\(count)").tag(count)
                     }
                 }
@@ -48,7 +48,7 @@ struct QuickFolderSettings: View {
             }
 
             Section {
-                ForEach(0..<4, id: \.self) { slot in
+                ForEach(0..<QuickFolderShortcut.maximumSlotCount, id: \.self) { slot in
                     folderRow(for: slot)
                 }
             } header: {

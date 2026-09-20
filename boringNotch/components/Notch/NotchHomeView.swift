@@ -226,7 +226,10 @@ struct MusicControlsView: View {
 
     private var slotToolbar: some View {
         let slots = activeSlots
-        let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
+        let visibleCount = min(
+            max(visibleQuickFolderCount, 1),
+            QuickFolderShortcut.maximumSlotCount
+        )
         let hasVisibleQuickFolders =
             !vm.isMirrorPreviewVisible
             && showQuickFolders
@@ -450,7 +453,10 @@ struct NotchHomeView: View {
 
     private var shouldShowQuickFolders: Bool {
         guard !shouldShowCamera else { return false }
-        let visibleCount = min(max(visibleQuickFolderCount, 1), 4)
+        let visibleCount = min(
+            max(visibleQuickFolderCount, 1),
+            QuickFolderShortcut.maximumSlotCount
+        )
         return showQuickFolders
             && quickFolders.contains { (0..<visibleCount).contains($0.slot) }
     }

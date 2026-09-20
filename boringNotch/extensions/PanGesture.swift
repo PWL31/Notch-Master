@@ -33,11 +33,32 @@ extension View {
             )
             .background(ScrollMonitor(direction: direction, threshold: threshold, action: action))
     }
+
+    /// Handles precise trackpad scrolling without installing a mouse-drag gesture.
+    /// This is useful for page navigation, where dragging sliders, files, or other
+    /// controls must not accidentally switch pages.
+    func trackpadPanGesture(
+        direction: PanDirection,
+        threshold: CGFloat = 4,
+        action: @escaping (CGFloat, NSEvent.Phase) -> Void
+    ) -> some View {
+        background(
+            ScrollMonitor(
+                direction: direction,
+                threshold: threshold,
+                preciseScrollingOnly: true,
+                restrictToViewBounds: true,
+                action: action
+            )
+        )
+    }
 }
 
 private struct ScrollMonitor: NSViewRepresentable {
     let direction: PanDirection
     let threshold: CGFloat
+    var preciseScrollingOnly = false
+    var restrictToViewBounds = false
     let action: (CGFloat, NSEvent.Phase) -> Void
 
     func makeNSView(context: Context) -> NSView {
@@ -49,12 +70,20 @@ private struct ScrollMonitor: NSViewRepresentable {
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) { coordinator.removeMonitor() }
 
     func makeCoordinator() -> Coordinator { 
-        Coordinator(direction: direction, threshold: threshold, action: action) 
+        Coordinator(
+            direction: direction,
+            threshold: threshold,
+            preciseScrollingOnly: preciseScrollingOnly,
+            restrictToViewBounds: restrictToViewBounds,
+            action: action
+        )
     }
 
     @MainActor final class Coordinator: NSObject {
         private let direction: PanDirection
         private let threshold: CGFloat
+        private let preciseScrollingOnly: Bool
+        private let restrictToViewBounds: Bool
         private let action: (CGFloat, NSEvent.Phase) -> Void
         private var localMonitor: Any?
         private var accumulated: CGFloat = 0
@@ -62,9 +91,17 @@ private struct ScrollMonitor: NSViewRepresentable {
         private var endTask: Task<Void, Never>?
         private let noiseThreshold: CGFloat = 0.2
 
-        init(direction: PanDirection, threshold: CGFloat, action: @escaping (CGFloat, NSEvent.Phase) -> Void) {
+        init(
+            direction: PanDirection,
+            threshold: CGFloat,
+            preciseScrollingOnly: Bool = false,
+            restrictToViewBounds: Bool = false,
+            action: @escaping (CGFloat, NSEvent.Phase) -> Void
+        ) {
             self.direction = direction
             self.threshold = threshold
+            self.preciseScrollingOnly = preciseScrollingOnly
+            self.restrictToViewBounds = restrictToViewBounds
             self.action = action
         }
 
@@ -91,9 +128,25 @@ private struct ScrollMonitor: NSViewRepresentable {
             // Local monitor for normal in-window scroll events.
             localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { [weak self, weak view] event in
                 guard let self = self, event.window === view?.window else { return event }
+                if self.restrictToViewBounds,
+                   let view,
+                   !view.bounds.contains(view.convert(event.locationInWindow, from: nil)) {
+                    self.cancelGesture()
+                    return event
+                }
                 self.handleScroll(event)
                 return event
             }
+        }
+
+        private func cancelGesture() {
+            if active || accumulated != 0 {
+                action(0, .ended)
+            }
+            accumulated = 0
+            active = false
+            endTask?.cancel()
+            endTask = nil
         }
 
         func removeMonitor() {
@@ -109,6 +162,10 @@ private struct ScrollMonitor: NSViewRepresentable {
         }
 
         private func handleScroll(_ event: NSEvent) {
+            guard !preciseScrollingOnly || event.hasPreciseScrollingDeltas else {
+                return
+            }
+
             if event.phase == .ended || event.momentumPhase == .ended {
                 if active {
                     action(accumulated.magnitude, .ended)

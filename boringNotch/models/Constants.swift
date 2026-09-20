@@ -271,6 +271,22 @@ extension Defaults.Keys {
     static let showQuickFolders = Key<Bool>("showQuickFolders", default: true)
     static let visibleQuickFolderCount = Key<Int>("visibleQuickFolderCount", default: 3)
     static let quickFolders = Key<[QuickFolderShortcut]>("quickFolders", default: [])
+    static let activityTemperatureKey = Key<String>(
+        "activityTemperatureKey",
+        default: "TCMz"
+    )
+    static let activityLeftMetric = Key<ActivityMetric>(
+        "activityLeftMetric",
+        default: .cpuLoad
+    )
+    static let activityMiddleMetric = Key<ActivityMetric>(
+        "activityMiddleMetric",
+        default: .memoryPressure
+    )
+    static let fanPresetCount = Key<Int>("fanPresetCount", default: 3)
+    static let fanPreset1RPM = Key<Int>("fanPreset1RPM", default: 3_000)
+    static let fanPreset2RPM = Key<Int>("fanPreset2RPM", default: 4_000)
+    static let fanPreset3RPM = Key<Int>("fanPreset3RPM", default: 5_000)
     static let tileShowLabels = Key<Bool>("tileShowLabels", default: false)
     static let showCalendar = Key<Bool>("showCalendar", default: false)
     static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)
@@ -340,6 +356,9 @@ extension Defaults.Keys {
     static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
     static let reverseShelfOrdering = Key<Bool>("reverseShelfOrdering", default: false)
+    static let showOneDriveInShelf = Key<Bool>("showOneDriveInShelf", default: true)
+    static let oneDriveWebURL = Key<String>("oneDriveWebURL", default: "")
+    static let oneDriveRecycleBinURL = Key<String>("oneDriveRecycleBinURL", default: "")
     
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)

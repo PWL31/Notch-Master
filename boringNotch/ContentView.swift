@@ -435,6 +435,8 @@ struct ContentView: View {
                         )
                     case .shelf:
                         ShelfView()
+                    case .activity:
+                        ActivityMonitorView()
                     }
                 }
                 .transition(

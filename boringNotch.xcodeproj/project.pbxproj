@@ -71,6 +71,10 @@
 		11CFC6632E09918400748C80 /* MusicControllerSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CFC6622E09917B00748C80 /* MusicControllerSelectionView.swift */; };
 		11CFC6652E09C7B300748C80 /* OnboardingFinishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CFC6642E09C7B300748C80 /* OnboardingFinishView.swift */; };
 		C0D3E0012F70000100C0D3E0 /* CodexUsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3E0022F70000100C0D3E0 /* CodexUsageView.swift */; };
+		C0A100012F72000100C0A100 /* ActivityMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A100022F72000100C0A100 /* ActivityMonitorView.swift */; };
+		C0A100032F72000100C0A100 /* ActivitySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A100042F72000100C0A100 /* ActivitySettingsView.swift */; };
+		C0A100052F72000100C0A100 /* ThermalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A100062F72000100C0A100 /* ThermalModels.swift */; };
+		C0A100082F72000100C0A100 /* SystemPerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A100092F72000100C0A100 /* SystemPerformanceMonitor.swift */; };
 		C0F100012F71000100C0F100 /* QuickFolderShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F100022F71000100C0F100 /* QuickFolderShortcut.swift */; };
 		C0F100032F71000100C0F100 /* QuickFolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F100042F71000100C0F100 /* QuickFolderService.swift */; };
 		C0F100052F71000100C0F100 /* QuickFolderLauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F100062F71000100C0F100 /* QuickFolderLauncherView.swift */; };
@@ -257,6 +261,10 @@
 		11CFC6622E09917B00748C80 /* MusicControllerSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControllerSelectionView.swift; sourceTree = "<group>"; };
 		11CFC6642E09C7B300748C80 /* OnboardingFinishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFinishView.swift; sourceTree = "<group>"; };
 		C0D3E0022F70000100C0D3E0 /* CodexUsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageView.swift; sourceTree = "<group>"; };
+		C0A100022F72000100C0A100 /* ActivityMonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityMonitorView.swift; sourceTree = "<group>"; };
+		C0A100042F72000100C0A100 /* ActivitySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySettingsView.swift; sourceTree = "<group>"; };
+		C0A100062F72000100C0A100 /* ThermalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThermalModels.swift; sourceTree = "<group>"; };
+		C0A100092F72000100C0A100 /* SystemPerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPerformanceMonitor.swift; sourceTree = "<group>"; };
 		C0F100022F71000100C0F100 /* QuickFolderShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickFolderShortcut.swift; sourceTree = "<group>"; };
 		C0F100042F71000100C0F100 /* QuickFolderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickFolderService.swift; sourceTree = "<group>"; };
 		C0F100062F71000100C0F100 /* QuickFolderLauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickFolderLauncherView.swift; sourceTree = "<group>"; };
@@ -531,6 +539,7 @@
 		11DB26722EDD0CDF001EA0CF /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C0A100042F72000100C0A100 /* ActivitySettingsView.swift */,
 				C0F100082F71000100C0F100 /* QuickFolderSettingsView.swift */,
 				11DB26672EDD0CDF001EA0CF /* AboutView.swift */,
 				11DB26682EDD0CDF001EA0CF /* AdvancedSettingsView.swift */,
@@ -592,6 +601,7 @@
 		1471639B2C5D362F0068B555 /* components */ = {
 			isa = PBXGroup;
 			children = (
+				C0A100072F72000100C0A100 /* Activity */,
 				C0D3E0022F70000100C0D3E0 /* CodexUsageView.swift */,
 				11985BDF2F37A3C800F81585 /* OSD */,
 				B141C23B2CA5F50900AC8CC8 /* Onboarding */,
@@ -730,6 +740,7 @@
 		14D570C72C5F38760011E668 /* models */ = {
 			isa = PBXGroup;
 			children = (
+				C0A100062F72000100C0A100 /* ThermalModels.swift */,
 				C0F100022F71000100C0F100 /* QuickFolderShortcut.swift */,
 				11F748812ECB07A400F841DB /* MusicControlButton.swift */,
 				118D1FD02E98FF5F00A2FF63 /* SharingStateManager.swift */,
@@ -750,6 +761,15 @@
 				9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */,
 			);
 			path = Tabs;
+			sourceTree = "<group>";
+		};
+		C0A100072F72000100C0A100 /* Activity */ = {
+			isa = PBXGroup;
+			children = (
+				C0A100022F72000100C0A100 /* ActivityMonitorView.swift */,
+				C0A100092F72000100C0A100 /* SystemPerformanceMonitor.swift */,
+			);
+			path = Activity;
 			sourceTree = "<group>";
 		};
 		9A987A042C73CA66005CA465 /* Shelf */ = {
@@ -1055,6 +1075,10 @@
 				1153BD8F2D986B1F00979FB0 /* MediaControllerProtocol.swift in Sources */,
 				11985BF42F38520A00F81585 /* DraggableProgressBar.swift in Sources */,
 				9AB0C6BD2C73C9CB00F7CD30 /* NotchHomeView.swift in Sources */,
+				C0A100012F72000100C0A100 /* ActivityMonitorView.swift in Sources */,
+				C0A100032F72000100C0A100 /* ActivitySettingsView.swift in Sources */,
+				C0A100052F72000100C0A100 /* ThermalModels.swift in Sources */,
+				C0A100082F72000100C0A100 /* SystemPerformanceMonitor.swift in Sources */,
 				C0F100012F71000100C0F100 /* QuickFolderShortcut.swift in Sources */,
 				C0F100032F71000100C0F100 /* QuickFolderService.swift in Sources */,
 				C0F100052F71000100C0F100 /* QuickFolderLauncherView.swift in Sources */,

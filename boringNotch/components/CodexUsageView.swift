@@ -16,6 +16,7 @@ private struct CodexRateLimitResponse: Decodable {
 }
 
 private struct RateLimitSnapshot: Decodable {
+    let limitId: String?
     let primary: RateLimitWindow?
     let secondary: RateLimitWindow?
 }
@@ -42,19 +43,33 @@ final class CodexUsageViewModel: ObservableObject {
     private init() {}
 
     var weeklyRemainingPercent: Int? {
-        weeklyWindow.map { max(0, min(100, 100 - $0.usedPercent)) }
+        remainingPercent(for: weeklyWindow)
     }
 
     func weeklyPercentageText(for mode: CodexUsageDisplayMode) -> String {
-        guard let weeklyWindow else { return "—" }
+        percentageText(for: weeklyWindow, mode: mode)
+    }
+
+    func percentageText(
+        for window: RateLimitWindow?,
+        mode: CodexUsageDisplayMode
+    ) -> String {
+        guard let window else { return "—" }
         let percentage = mode == .used
-            ? weeklyWindow.usedPercent
-            : max(0, min(100, 100 - weeklyWindow.usedPercent))
+            ? max(0, min(100, window.usedPercent))
+            : remainingPercent(for: window) ?? 0
         return "\(percentage)%"
     }
 
     func resetCountdownText(at date: Date = Date()) -> String? {
-        guard let timestamp = weeklyWindow?.resetsAt else { return nil }
+        resetCountdownText(for: weeklyWindow, at: date)
+    }
+
+    func resetCountdownText(
+        for window: RateLimitWindow?,
+        at date: Date = Date()
+    ) -> String? {
+        guard let timestamp = window?.resetsAt else { return nil }
         let remainingSeconds = TimeInterval(timestamp) - date.timeIntervalSince1970
         guard remainingSeconds > 0 else { return "now" }
 
@@ -65,6 +80,10 @@ final class CodexUsageViewModel: ObservableObject {
             return "\(Int(ceil(remainingSeconds / (60 * 60))))h"
         }
         return "\(Int(ceil(remainingSeconds / (24 * 60 * 60))))d"
+    }
+
+    func remainingPercent(for window: RateLimitWindow?) -> Int? {
+        window.map { max(0, min(100, 100 - $0.usedPercent)) }
     }
 
     var resetText: String? {
@@ -78,7 +97,10 @@ final class CodexUsageViewModel: ObservableObject {
     var settingsDescription: String {
         if let weeklyWindow {
             let remaining = max(0, min(100, 100 - weeklyWindow.usedPercent))
-            return "\(weeklyWindow.usedPercent)% used · \(remaining)% remaining · \(resetText ?? "reset time unavailable")"
+            let shortDescription = shortWindow.map {
+                "5h \($0.usedPercent)% used · "
+            } ?? ""
+            return "\(shortDescription)weekly \(weeklyWindow.usedPercent)% used · \(remaining)% remaining · \(resetText ?? "reset time unavailable")"
         }
         if let errorMessage {
             return errorMessage
@@ -113,9 +135,17 @@ final class CodexUsageViewModel: ObservableObject {
                     )
                 }
 
-                guard let snapshot = response.result?.rateLimits
-                    ?? response.result?.rateLimitsByLimitId?.values.first
-                else {
+                let directSnapshot = response.result?.rateLimits
+                let snapshotsById = response.result?.rateLimitsByLimitId ?? [:]
+                let preferredSnapshots = [
+                    directSnapshot,
+                    snapshotsById["codex"]
+                ].compactMap { $0 }
+                let snapshots = preferredSnapshots.isEmpty
+                    ? Array(snapshotsById.values)
+                    : preferredSnapshots
+
+                guard !snapshots.isEmpty else {
                     throw NSError(
                         domain: "BoringNotch.CodexUsage",
                         code: 3,
@@ -123,13 +153,17 @@ final class CodexUsageViewModel: ObservableObject {
                     )
                 }
 
-                let windows = [snapshot.primary, snapshot.secondary].compactMap { $0 }
-                weeklyWindow = windows.max {
-                    ($0.windowDurationMins ?? 0) < ($1.windowDurationMins ?? 0)
+                let windows = snapshots
+                    .flatMap { [$0.primary, $0.secondary].compactMap { $0 } }
+                    .reduce(into: [RateLimitWindow]()) { result, window in
+                        if !result.contains(window) {
+                            result.append(window)
+                        }
+                    }
+                weeklyWindow = Self.weeklyWindow(in: windows)
+                shortWindow = windows.first {
+                    $0.windowDurationMins == 5 * 60
                 }
-                shortWindow = windows
-                    .filter { ($0.windowDurationMins ?? .max) < 24 * 60 }
-                    .min { ($0.windowDurationMins ?? .max) < ($1.windowDurationMins ?? .max) }
                 errorMessage = nil
                 lastUpdated = Date()
             } catch {
@@ -138,6 +172,23 @@ final class CodexUsageViewModel: ObservableObject {
             isRefreshing = false
         }
     }
+
+    private static func weeklyWindow(
+        in windows: [RateLimitWindow]
+    ) -> RateLimitWindow? {
+        if let exactWeeklyWindow = windows.first(where: {
+            $0.windowDurationMins == 7 * 24 * 60
+        }) {
+            return exactWeeklyWindow
+        }
+
+        return windows
+            .filter { ($0.windowDurationMins ?? 0) >= 24 * 60 }
+            .min {
+                abs(($0.windowDurationMins ?? 0) - 7 * 24 * 60)
+                    < abs(($1.windowDurationMins ?? 0) - 7 * 24 * 60)
+            }
+    }
 }
 
 struct CodexWeekUsageBadge: View {
@@ -145,58 +196,108 @@ struct CodexWeekUsageBadge: View {
     @Default(.codexUsageDisplayMode) private var displayMode
 
     var body: some View {
-        HStack(spacing: 6) {
-            statusIndicator
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                HStack(spacing: 4) {
-                    Text(usage.weeklyPercentageText(for: displayMode))
-                    if let countdown = usage.resetCountdownText(at: context.date) {
-                        Text("·")
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 9, weight: .bold))
-                        Text(countdown)
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            Group {
+                if let shortWindow = usage.shortWindow,
+                   let weeklyWindow = usage.weeklyWindow {
+                    VStack(spacing: 0) {
+                        usageRow(
+                            window: shortWindow,
+                            date: context.date,
+                            compact: true
+                        )
+                        usageRow(
+                            window: weeklyWindow,
+                            date: context.date,
+                            compact: true
+                        )
                     }
+                } else {
+                    usageRow(
+                        window: usage.weeklyWindow ?? usage.shortWindow,
+                        date: context.date,
+                        compact: false
+                    )
                 }
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(statusColor)
             }
         }
-        .padding(.horizontal, 9)
+        .padding(.horizontal, usage.shortWindow == nil ? 9 : 8)
         .frame(height: 30)
         .background(.white.opacity(0.08), in: Capsule())
-        .help(usage.resetText ?? usage.errorMessage ?? "Codex weekly usage")
+        .help(badgeHelpText)
         .onAppear { usage.start() }
         .onTapGesture { usage.refresh() }
     }
 
     @ViewBuilder
-    private var statusIndicator: some View {
+    private func usageRow(
+        window: RateLimitWindow?,
+        date: Date,
+        compact: Bool
+    ) -> some View {
+        HStack(spacing: compact ? 3 : 4) {
+            statusIndicator(for: window, compact: compact)
+            Text(usage.percentageText(for: window, mode: displayMode))
+            if let countdown = usage.resetCountdownText(for: window, at: date) {
+                Text("·")
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(
+                        size: compact ? 7 : 9,
+                        weight: .bold
+                    ))
+                Text(countdown)
+            }
+        }
+        .font(.system(
+            size: compact ? 8.5 : 11,
+            weight: .semibold,
+            design: .rounded
+        ))
+        .monospacedDigit()
+        .foregroundStyle(statusColor(for: window))
+        .frame(height: compact ? 12 : 30)
+    }
+
+    @ViewBuilder
+    private func statusIndicator(
+        for window: RateLimitWindow?,
+        compact: Bool
+    ) -> some View {
         if usage.errorMessage != nil {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: compact ? 7 : 10, weight: .bold))
                 .foregroundStyle(.orange)
-        } else if isCritical {
+        } else if isCritical(window) {
             Image(systemName: "exclamationmark.circle.fill")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: compact ? 8 : 11, weight: .bold))
                 .foregroundStyle(.red)
                 .shadow(color: .red.opacity(0.9), radius: 4)
         } else {
             Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-                .shadow(color: statusColor.opacity(0.9), radius: 4)
+                .fill(statusColor(for: window))
+                .frame(
+                    width: compact ? 5 : 8,
+                    height: compact ? 5 : 8
+                )
+                .shadow(
+                    color: statusColor(for: window).opacity(0.9),
+                    radius: compact ? 2 : 4
+                )
         }
     }
 
-    private var isCritical: Bool {
-        guard let remaining = usage.weeklyRemainingPercent else { return false }
+    private func isCritical(_ window: RateLimitWindow?) -> Bool {
+        guard let remaining = usage.remainingPercent(for: window) else {
+            return false
+        }
         return remaining < 10
     }
 
-    private var statusColor: Color {
+    private func statusColor(for window: RateLimitWindow?) -> Color {
         guard usage.errorMessage == nil else { return .orange }
-        guard let remaining = usage.weeklyRemainingPercent else { return .gray }
+        guard let remaining = usage.remainingPercent(for: window) else {
+            return .gray
+        }
         if remaining < 20 {
             return .red
         }
@@ -204,5 +305,15 @@ struct CodexWeekUsageBadge: View {
             return .yellow
         }
         return .green
+    }
+
+    private var badgeHelpText: String {
+        if let shortWindow = usage.shortWindow,
+           let weeklyWindow = usage.weeklyWindow {
+            return "5h: \(usage.percentageText(for: shortWindow, mode: displayMode)) · Weekly: \(usage.percentageText(for: weeklyWindow, mode: displayMode)) · Click to refresh"
+        }
+        return usage.resetText
+            ?? usage.errorMessage
+            ?? "Codex weekly usage"
     }
 }

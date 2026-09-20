@@ -61,4 +61,23 @@ final class BNLunarBrightnessEvent: NSObject, NSSecureCoding {
     func setLunarOSDHidden(_ hide: Bool, with reply: @escaping (Bool) -> Void)
     /// Read the signed-in Codex account's rate-limit snapshot as one JSON response.
     func fetchCodexRateLimits(with reply: @escaping (NSData?, NSString?) -> Void)
+    /// Read temperatures, fan speeds, hardware limits, and controller capability.
+    func fetchThermalSnapshot(with reply: @escaping (NSData?, NSString?) -> Void)
+    /// Apply a fan mode through an explicitly supported external controller.
+    func setFanControlMode(
+        _ mode: NSString,
+        rpm: NSNumber?,
+        with reply: @escaping (Bool, NSString?) -> Void
+    )
+    /// Query, install, repair, or remove Notch Master's local root fan helper.
+    func fanControllerStatus(with reply: @escaping (Bool, NSString) -> Void)
+    func installFanController(with reply: @escaping (Bool, NSString?) -> Void)
+    func uninstallFanController(with reply: @escaping (Bool, NSString?) -> Void)
+    /// Read the locally exposed OneDrive account/status menu text.
+    func fetchOneDriveStatus(with reply: @escaping (NSData?, NSString?) -> Void)
+    /// Open OneDrive's activity center, synced folder, or Preferences UI.
+    func performOneDriveAction(
+        _ action: NSString,
+        with reply: @escaping (Bool, NSString?) -> Void
+    )
 }

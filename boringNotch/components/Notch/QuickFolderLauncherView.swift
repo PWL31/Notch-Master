@@ -11,7 +11,10 @@ struct QuickFolderLauncherView: View {
     @Default(.visibleQuickFolderCount) private var visibleQuickFolderCount
 
     private var clampedVisibleCount: Int {
-        min(max(visibleQuickFolderCount, 1), 4)
+        min(
+            max(visibleQuickFolderCount, 1),
+            QuickFolderShortcut.maximumSlotCount
+        )
     }
 
     private var configuredFolders: [QuickFolderShortcut] {
@@ -28,7 +31,8 @@ struct QuickFolderLauncherView: View {
                 HoverButton(
                     icon: QuickFolderIconResolver.symbol(for: shortcut),
                     iconColor: .secondary,
-                    scale: .medium
+                    scale: .medium,
+                    buttonSize: 24
                 ) {
                     QuickFolderService.open(shortcut)
                 }

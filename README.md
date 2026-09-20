@@ -19,8 +19,10 @@ Notch Master is an experimental macOS utility that turns the display notch into 
 
 ## What this fork adds
 
-- **Codex weekly usage** in the expanded notch, with Used/Remaining modes, reset countdown, and color thresholds.
-- **Quick Folders** with one to four configurable shortcuts, Finder-style automatic icons, custom SF Symbols, and security-scoped bookmarks.
+- **Codex 5-hour and weekly usage** in an adaptive one- or two-row expanded-notch badge, with Used/Remaining modes, reset countdowns, and color thresholds.
+- **Quick Folders** with one to five configurable shortcuts, Finder-style automatic icons, custom SF Symbols, and security-scoped bookmarks.
+- **Activity Monitor** with two configurable live charts (CPU load, memory pressure, network I/O, load average, or thermal pressure), local AppleSMC temperature/fan readings, 1–3 fan presets, and a haptic 100-RPM detent slider.
+- **OneDrive shelf status** with local sync-state display, an activity-center shortcut, and browser links to OneDrive and its recycle bin.
 - **External-display gesture mode** that hides the closed black notch while retaining a subtle hover target and the full gesture interaction.
 - **Notch-only interface** with no persistent menu bar icon.
 - **Notch Master branding** and a fork-safe release channel.
@@ -32,12 +34,15 @@ Notch Master also retains the upstream media controls, calendar, shelf, mirror, 
 - macOS 14 Sonoma or later.
 - A Mac with or without a physical notch.
 - The Codex usage badge requires a working local Codex installation signed in to your account. No API key is stored by Notch Master.
+- Temperature and fan monitoring works directly through AppleSMC. Fan-control buttons require Notch Master's optional local controller, installed from **Settings → Activity** with one administrator approval; without it, the page remains safely read-only.
 
 ## Install
 
 1. Download `Notch-Master-v0.1.0-macOS.zip` from the [latest GitHub Release](https://github.com/PWL31/Notch-Master/releases/latest).
 2. Unzip it and move **Notch Master.app** to `/Applications`.
 3. Open the app.
+
+The latest tagged download may lag behind `main`. Build from source for the newest changes until a new release is published.
 
 This experimental build is ad-hoc signed rather than Apple-notarized. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway**. Alternatively, after confirming that the download came from this repository, run:
 
@@ -52,6 +57,10 @@ Notch Master does not contain an automatic updater. New versions are distributed
 - Quick Folder permissions are stored locally as macOS security-scoped bookmarks.
 - The Codex badge asks the locally installed Codex client for the signed-in account's rate-limit snapshot.
 - Notch Master does not ask for or store a Codex API key.
+- Activity readings stay on this Mac. Performance charts use local Mach kernel and network-interface counters; temperature and fan data comes directly from AppleSMC. Notch Master performs no telemetry or remote monitoring requests.
+- OneDrive integration reads the locally exposed accessibility label from OneDrive's own status control. Configure your web and recycle-bin HTTPS links in **Settings → Shelf**; they are stored locally and are not part of the repository. The buttons open those links in your browser. It does not read file contents, request a Microsoft account token, or call Microsoft Graph; without Accessibility permission it reports only whether OneDrive is running.
+- Fan-control commands are disabled unless the optional Notch Master controller is running. The root-owned helper has no network access, exposes only `Auto`, `Full`, and range-checked RPM commands, and accepts requests only from the macOS user who installed it.
+- Custom presets are rejected outside the minimum/maximum RPM range reported by the Mac. **Auto** clears Notch Master's manual mode and returns fan management to macOS. Manual fan control can interfere with Apple's thermal policy; use it at your own risk.
 - Camera, calendar, reminders, accessibility, and audio permissions remain optional and are used only for the corresponding visible features.
 
 The inherited third-party media integrations and dependencies retain their own behavior and licenses.
@@ -72,7 +81,7 @@ Swift Package Manager dependencies are resolved by Xcode. The main target and XP
 
 ## Project status
 
-`v0.1.0` is an **experimental personal-fork release**. It is usable, but it is not notarized and may change quickly. Please report reproducible bugs through [GitHub Issues](https://github.com/PWL31/Notch-Master/issues).
+`v0.1.0` is an **experimental personal-fork release**; `main` is active development. It is usable, but it is not notarized and may change quickly. Please report reproducible bugs through [GitHub Issues](https://github.com/PWL31/Notch-Master/issues).
 
 ## License and attribution
 

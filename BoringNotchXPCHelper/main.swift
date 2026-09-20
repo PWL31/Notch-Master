@@ -38,12 +38,49 @@ class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     }
 }
 
-// Create the delegate for the service.
-let delegate = ServiceDelegate()
+if CommandLine.arguments.contains("--fan-controller-status") {
+    let status = FanControlDaemonClient.status()
+    print(status.detail)
+    exit(status.available ? 0 : 1)
+} else if CommandLine.arguments.contains("--install-fan-controller") {
+    let semaphore = DispatchSemaphore(value: 0)
+    var succeeded = false
+    FanControlInstallerService().install { success, detail in
+        succeeded = success
+        print(detail ?? (success ? "Installed" : "Installation failed"))
+        semaphore.signal()
+    }
+    semaphore.wait()
+    exit(succeeded ? 0 : 1)
+} else if CommandLine.arguments.contains("--uninstall-fan-controller") {
+    let semaphore = DispatchSemaphore(value: 0)
+    var succeeded = false
+    FanControlInstallerService().uninstall { success, detail in
+        succeeded = success
+        print(detail ?? (success ? "Removed" : "Removal failed"))
+        semaphore.signal()
+    }
+    semaphore.wait()
+    exit(succeeded ? 0 : 1)
+} else if CommandLine.arguments.contains("--fan-daemon") {
+    guard let uidIndex = CommandLine.arguments.firstIndex(of: "--allowed-uid"),
+          CommandLine.arguments.indices.contains(uidIndex + 1),
+          let uidValue = UInt32(CommandLine.arguments[uidIndex + 1]) else {
+        fputs("Missing --allowed-uid.\n", stderr)
+        exit(64)
+    }
+    do {
+        try FanControlDaemon(allowedUID: uid_t(uidValue)).run()
+    } catch {
+        fputs("Fan controller failed: \(error.localizedDescription)\n", stderr)
+        exit(1)
+    }
+} else {
+    // Create the delegate for the service.
+    let delegate = ServiceDelegate()
 
-// Set up the one NSXPCListener for this service. It will handle all incoming connections.
-let listener = NSXPCListener.service()
-listener.delegate = delegate
-
-// Resuming the serviceListener starts this service. This method does not return.
-listener.resume()
+    // Set up the XPC listener for the embedded user-level helper.
+    let listener = NSXPCListener.service()
+    listener.delegate = delegate
+    listener.resume()
+}
